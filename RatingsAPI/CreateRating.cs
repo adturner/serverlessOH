@@ -30,7 +30,7 @@ namespace RatingsAPI
             theRating.id = Guid.NewGuid().ToString();
             theRating.userId = data.userId;
             theRating.productId = data.productId;
-            theRating.timestamp = DateTime.Now.ToUniversalTime().ToLongDateString();
+            theRating.timestamp = DateTime.UtcNow.ToString("yyyy-MM-dd HH:mm:ssZ");
             theRating.locationName = data.locationName;
             theRating.rating = Convert.ToInt32(data.rating);
             theRating.userNotes = data.userNotes;
