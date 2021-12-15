@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.4.1008.15138",
-      "templateHash": "17318211927655309581"
+      "templateHash": "11595861524835525320"
     }
   },
   "parameters": {
@@ -366,6 +366,12 @@
         "type": "SystemAssigned"
       },
       "properties": {
+        "createMode": "Default",
+        "locations": [
+          {
+            "locationName": "[variables('resourceLocation')]"
+          }
+        ],
         "consistencyPolicy": {
           "defaultConsistencyLevel": "Eventual"
         },
