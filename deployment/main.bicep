@@ -37,7 +37,6 @@ var appServicePlanName = '${deploymentPrefix}${uniqueId}apppln'
 var functionAppName = '${deploymentPrefix}${uniqueId}ratings'
 // ratings app insights name
 var ratingsAppInsightName = '${deploymentPrefix}${uniqueId}ratingsai'
-var ratingsDatabaseName = '${deploymentPrefix}${uniqueId}ratingsdb'
 
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-03-01-preview' = {
   name: laName
@@ -287,8 +286,12 @@ resource ratingsAppInsights 'microsoft.insights/components@2020-02-02-preview' =
     WorkspaceResourceId: logAnalyticsWorkspace.id
   }
 }
-resource ratingsDatabase 'Microsoft.DocumentDB/databaseAccounts@2021-07-01-preview' = {
-  name: ratingsDatabaseName
+var ratingsAccountName = '${deploymentPrefix}${uniqueId}ratingscdb'
+var ratingsDatabaseName = 'products'
+var ratingsCollectionName = 'ratings'
+
+resource ratingsCosmosAccount 'Microsoft.DocumentDB/databaseAccounts@2021-07-01-preview' = {
+  name: ratingsAccountName
   location: resourceLocation
   tags: resourceTags
   kind: 'GlobalDocumentDB'
@@ -308,8 +311,8 @@ resource ratingsDatabase 'Microsoft.DocumentDB/databaseAccounts@2021-07-01-previ
     databaseAccountOfferType: 'Standard'
   }
 }
-resource ratingsDatabaseDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
-  scope: ratingsDatabase
+resource ratingsAccountDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  scope: ratingsCosmosAccount
   name: 'defaultSettings'
   properties: {
     workspaceId: logAnalyticsWorkspace.id
@@ -343,6 +346,30 @@ resource ratingsDatabaseDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-
     ]
   }
 }
+resource ratingsCosmosAccount_products 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2021-01-15' = {
+  parent: ratingsCosmosAccount
+  name: ratingsDatabaseName
+  properties: {
+    resource: {
+      id: ratingsDatabaseName
+    }
+  }
+}
+resource ratingsCosmosAccount_products_ratings 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers@2021-01-15' = {
+  parent:ratingsCosmosAccount_products
+  name: ratingsCollectionName
+  properties: {
+    resource: {
+      id: ratingsCollectionName
+      partitionKey: {
+        paths: [
+          '/productId'
+        ]
+        kind: 'Hash'
+      }
+    }
+  }
+}
 // function app settings
 var keyVaultUri = keyVault.properties.vaultUri 
 
@@ -355,6 +382,7 @@ resource ratingsAppSettings 'Microsoft.Web/sites/config@2021-02-01' = {
     'APPINSIGHTS_INSTRUMENTATIONKEY': ratingsAppInsights.properties.InstrumentationKey
     'AzureWebJobsStorage': 'DefaultEndpointsProtocol=https;AccountName=${functionsStorageAccount.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${listKeys(functionsStorageAccount.id, functionsStorageAccount.apiVersion).keys[0].value}'
     'AzureWebJobs.ImportBundleBlobTrigger.Disabled': '1'
+    'CosmosDBConnection': '@Microsoft.KeyVault(SecretUri=${keyVaultUri}/secrets/CosmosDBConnection/)'
   }
 }
 // FHIR Bulk Loader Code Repo
@@ -371,5 +399,35 @@ resource ratingAPIUsingCD 'Microsoft.Web/sites/sourcecontrols@2020-12-01' = {
     repoUrl: ratingsRepoUrl
     branch: ratingsRepoBranch
     isManualIntegration: true
+  }
+}
+resource functionAppKeyVaultPermissions 'Microsoft.KeyVault/vaults/accessPolicies@2021-06-01-preview' = {
+  name: 'add'
+  parent: keyVault
+  properties: {
+    accessPolicies: [
+      {
+        objectId: ratingsFunctionApp.identity.principalId
+        permissions: {
+          certificates: [ 
+            'get'
+           ]
+          keys: [ 
+            'get' 
+          ]
+          secrets: [ 
+            'get' 
+          ]
+        }
+        tenantId: tenantId
+      }
+    ]
+  }
+}
+resource createKeyVaultCosmosSecret 'Microsoft.KeyVault/vaults/secrets@2019-09-01' = {
+  name: '${keyVault.name}/CosmosDBConnection'
+  properties:{
+    
+    value: 'AccountEndpoint=${ratingsCosmosAccount.properties.documentEndpoint};AccountKey=${ratingsCosmosAccount.listKeys().primaryMasterKey};' 
   }
 }
