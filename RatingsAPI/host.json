@@ -7,5 +7,14 @@
                 "excludedTypes": "Request"
             }
         }
+    },
+    "extensions": {
+        "cosmosDb": {
+            "connectionMode": "Gateway",
+            "protocol": "Https",
+            "leaseOptions": {
+                "leasePrefix": "prefix1"
+            }
+        }
     }
 }

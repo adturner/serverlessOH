@@ -15,21 +15,49 @@ namespace RatingsAPI
         [FunctionName("GetRating")]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
-            ILogger log)
+                [CosmosDB(
+                    databaseName: "products",
+                    collectionName: "ratings",
+                    //ConnectionStringSetting = "AccountEndpoint=https://serverlessohteamone.documents.azure.com:443/;AccountKey=mtpobleU4hW2a0BP79rbYPh6LC4GSYeOEQn9yrkP2jTcnjGcl0I2CHsVH1lwzLlUQ14IwlFrgfhdkCqmIqxddA==;",
+                    ConnectionStringSetting = "CosmosDBConnection",
+                    Id = "{Query.id}",
+                    PartitionKey = "productId")] Rating ratingItem,
+                ILogger log)
         {
             log.LogInformation("C# HTTP trigger function processed a request.");
 
-            string name = req.Query["name"];
+            if (ratingItem == null)
+            {
+                log.LogInformation($"Product not found");
+            }
+            else
+            {
+                log.LogInformation($"Found Product, Description={ratingItem.id}");
+            }
 
-            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            dynamic data = JsonConvert.DeserializeObject(requestBody);
-            name = name ?? data?.name;
+            Rating rating = new Rating();
+            rating.id = ratingItem.id;
+            rating.userId = ratingItem.userId;
+            rating.productId = ratingItem.productId;
+            rating.timestamp = ratingItem.timestamp;
+            rating.locationName = ratingItem.locationName;
+            rating.rating = ratingItem.rating;
+            rating.userNotes = ratingItem.userNotes;
 
-            string responseMessage = string.IsNullOrEmpty(name)
-                ? "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response."
-                : $"Hello, {name}. This HTTP triggered function executed successfully.";
+            string jsonRating = JsonConvert.SerializeObject(rating);
 
-            return new OkObjectResult(responseMessage);
+           // {
+             //   "id": "79c2779e-dd2e-43e8-803d-ecbebed8972c",
+             //   "userId": "cc20a6fb-a91f-4192-874d-132493685376",
+             //   "productId": "4c25613a-a3c2-4ef3-8e02-9c335eb23204",
+             //   "timestamp": "2018-05-21 21:27:47Z",
+             //   "locationName": "Sample ice cream shop",
+             //   "rating": 5,
+             //   "userNotes": "I love the subtle notes of orange in this ice cream!"
+          ///  }
+            //return new OkResult();
+
+            return new OkObjectResult(jsonRating);
         }
     }
 }
