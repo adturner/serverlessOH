@@ -1,3 +1,7 @@
+// az login
+// az bicep build --file main.bicep --outfile main.json
+// az deployment group create --resource-group HackerThreeRG --template-file main.bicep --what-if
+
 @description('Tags to be applied to resources that are deployed in this template')
 param resourceTags object  = {
   environmentName: 'Azure Serverless OpenHack'
@@ -33,6 +37,7 @@ var appServicePlanName = '${deploymentPrefix}${uniqueId}apppln'
 var functionAppName = '${deploymentPrefix}${uniqueId}ratings'
 // ratings app insights name
 var ratingsAppInsightName = '${deploymentPrefix}${uniqueId}ratingsai'
+var ratingsDatabaseName = '${deploymentPrefix}${uniqueId}ratingsdb'
 
 resource logAnalyticsWorkspace 'Microsoft.OperationalInsights/workspaces@2020-03-01-preview' = {
   name: laName
@@ -280,5 +285,62 @@ resource ratingsAppInsights 'microsoft.insights/components@2020-02-02-preview' =
   properties: {
     Application_Type: 'web'
     WorkspaceResourceId: logAnalyticsWorkspace.id
+  }
+}
+resource ratingsDatabase 'Microsoft.DocumentDB/databaseAccounts@2021-07-01-preview' = {
+  name: ratingsDatabaseName
+  location: resourceLocation
+  tags: resourceTags
+  kind: 'GlobalDocumentDB'
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    createMode: 'Default'
+    locations:[
+      {
+        locationName: resourceLocation
+      }
+    ]
+    consistencyPolicy: {
+      defaultConsistencyLevel: 'Eventual'
+    }
+    databaseAccountOfferType: 'Standard'
+    defaultIdentity: 'SystenAssginedIdentity'
+  }
+}
+resource ratingsDatabaseDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
+  scope: ratingsDatabase
+  name: 'defaultSettings'
+  properties: {
+    workspaceId: logAnalyticsWorkspace.id
+    logs: [ 
+      {
+        category: 'DataPlaneRequests'
+        enabled: true
+        retentionPolicy:{
+          enabled: true
+          days: 7
+        }
+      }
+      {
+        category: 'TableApiRequests'
+        enabled: true
+        retentionPolicy:{
+          enabled: true
+          days: 7
+        }
+      }
+    ]
+    metrics: [
+      {
+        category: 'Requests'
+        enabled: true
+        retentionPolicy:{
+          enabled: true
+          days: 7
+        }
+      }
+    ]
   }
 }
