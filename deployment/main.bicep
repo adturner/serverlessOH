@@ -343,6 +343,9 @@ resource ratingsDatabaseDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-
     ]
   }
 }
+// function app settings
+var keyVaultUri = keyVault.properties.vaultUri 
+
 resource ratingsAppSettings 'Microsoft.Web/sites/config@2021-02-01' = {
   name: 'appsettings'
   parent: ratingsFunctionApp
