@@ -343,3 +343,30 @@ resource ratingsDatabaseDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-
     ]
   }
 }
+resource ratingsAppSettings 'Microsoft.Web/sites/config@2021-02-01' = {
+  name: 'appsettings'
+  parent: ratingsFunctionApp
+  properties: {
+    'FUNCTIONS_EXTENSION_VERSION': '~3'
+    'FUNCTIONS_WORKER_RUNTIME': 'dotnet'
+    'APPINSIGHTS_INSTRUMENTATIONKEY': ratingsAppInsights.properties.InstrumentationKey
+    'AzureWebJobsStorage': 'DefaultEndpointsProtocol=https;AccountName=${functionsStorageAccount.name};EndpointSuffix=${environment().suffixes.storage};AccountKey=${listKeys(functionsStorageAccount.id, functionsStorageAccount.apiVersion).keys[0].value}'
+    'AzureWebJobs.ImportBundleBlobTrigger.Disabled': '1'
+  }
+}
+// FHIR Bulk Loader Code Repo
+var ratingsRepoUrl = 'https://github.com/adturner/serverlessOH'
+var ratingsRepoBranch = 'main'
+//deploy fhir loader code
+resource ratingAPIUsingCD 'Microsoft.Web/sites/sourcecontrols@2020-12-01' = {
+  dependsOn: [
+    ratingsAppSettings
+  ]
+  name:'web'
+  parent: ratingsFunctionApp
+  properties: {
+    repoUrl: ratingsRepoUrl
+    branch: ratingsRepoBranch
+    isManualIntegration: true
+  }
+}
