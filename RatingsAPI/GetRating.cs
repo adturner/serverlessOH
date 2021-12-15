@@ -14,22 +14,27 @@ namespace RatingsAPI
     {
         [FunctionName("GetRating")]
         public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
-            ILogger log)
+            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "GetRating/{productId}/{ratingId}")] HttpRequest req,
+                [CosmosDB(
+                    databaseName: "products",
+                    collectionName: "ratings",
+                    ConnectionStringSetting = "CosmosDBConnection",
+                    Id = "{ratingId}",
+                    PartitionKey = "{productId}")] Rating ratingItem,
+                ILogger log)
         {
             log.LogInformation("C# HTTP trigger function processed a request.");
 
-            string name = req.Query["name"];
+            if (ratingItem == null)
+            {
+                log.LogInformation($"Product not found");
+            }
+            else
+            {
+                log.LogInformation($"Found Product, Description={ratingItem.id}");
+            }
 
-            string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            dynamic data = JsonConvert.DeserializeObject(requestBody);
-            name = name ?? data?.name;
-
-            string responseMessage = string.IsNullOrEmpty(name)
-                ? "This HTTP triggered function executed successfully. Pass a name in the query string or in the request body for a personalized response."
-                : $"Hello, {name}. This HTTP triggered function executed successfully.";
-
-            return new OkObjectResult(responseMessage);
+            return new OkObjectResult(ratingItem);
         }
     }
 }
