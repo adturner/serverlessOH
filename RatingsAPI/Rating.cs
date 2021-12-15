@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using Microsoft.Azure.WebJobs.Extensions.CosmosDB;
 using Newtonsoft.Json;
 
 namespace RatingsAPI
