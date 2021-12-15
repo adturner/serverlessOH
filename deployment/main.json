@@ -5,7 +5,7 @@
     "_generator": {
       "name": "bicep",
       "version": "0.4.1008.15138",
-      "templateHash": "11595861524835525320"
+      "templateHash": "8294506090526488100"
     }
   },
   "parameters": {
@@ -40,7 +40,9 @@
     "appServicePlanName": "[format('{0}{1}apppln', parameters('deploymentPrefix'), variables('uniqueId'))]",
     "functionAppName": "[format('{0}{1}ratings', parameters('deploymentPrefix'), variables('uniqueId'))]",
     "ratingsAppInsightName": "[format('{0}{1}ratingsai', parameters('deploymentPrefix'), variables('uniqueId'))]",
-    "ratingsDatabaseName": "[format('{0}{1}ratingsdb', parameters('deploymentPrefix'), variables('uniqueId'))]"
+    "ratingsDatabaseName": "[format('{0}{1}ratingsdb', parameters('deploymentPrefix'), variables('uniqueId'))]",
+    "ratingsRepoUrl": "https://github.com/adturner/serverlessOH",
+    "ratingsRepoBranch": "main"
   },
   "resources": [
     {
@@ -375,8 +377,7 @@
         "consistencyPolicy": {
           "defaultConsistencyLevel": "Eventual"
         },
-        "databaseAccountOfferType": "Standard",
-        "defaultIdentity": "SystenAssginedIdentity"
+        "databaseAccountOfferType": "Standard"
       }
     },
     {
@@ -418,6 +419,37 @@
       "dependsOn": [
         "[resourceId('Microsoft.OperationalInsights/workspaces', variables('laName'))]",
         "[resourceId('Microsoft.DocumentDB/databaseAccounts', variables('ratingsDatabaseName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/sites/config",
+      "apiVersion": "2021-02-01",
+      "name": "[format('{0}/{1}', variables('functionAppName'), 'appsettings')]",
+      "properties": {
+        "FUNCTIONS_EXTENSION_VERSION": "~3",
+        "FUNCTIONS_WORKER_RUNTIME": "dotnet",
+        "APPINSIGHTS_INSTRUMENTATIONKEY": "[reference(resourceId('Microsoft.Insights/components', variables('ratingsAppInsightName'))).InstrumentationKey]",
+        "AzureWebJobsStorage": "[format('DefaultEndpointsProtocol=https;AccountName={0};EndpointSuffix={1};AccountKey={2}', variables('storageAccountName'), environment().suffixes.storage, listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2021-04-01').keys[0].value)]",
+        "AzureWebJobs.ImportBundleBlobTrigger.Disabled": "1"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName'))]",
+        "[resourceId('Microsoft.Insights/components', variables('ratingsAppInsightName'))]",
+        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/sites/sourcecontrols",
+      "apiVersion": "2020-12-01",
+      "name": "[format('{0}/{1}', variables('functionAppName'), 'web')]",
+      "properties": {
+        "repoUrl": "[variables('ratingsRepoUrl')]",
+        "branch": "[variables('ratingsRepoBranch')]",
+        "isManualIntegration": true
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites/config', variables('functionAppName'), 'appsettings')]",
+        "[resourceId('Microsoft.Web/sites', variables('functionAppName'))]"
       ]
     }
   ]
