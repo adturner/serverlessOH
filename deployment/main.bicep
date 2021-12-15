@@ -306,7 +306,6 @@ resource ratingsDatabase 'Microsoft.DocumentDB/databaseAccounts@2021-07-01-previ
       defaultConsistencyLevel: 'Eventual'
     }
     databaseAccountOfferType: 'Standard'
-    defaultIdentity: 'SystenAssginedIdentity'
   }
 }
 resource ratingsDatabaseDiagnostics 'Microsoft.Insights/diagnosticSettings@2021-05-01-preview' = {
