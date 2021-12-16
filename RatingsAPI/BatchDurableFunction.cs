@@ -22,23 +22,19 @@ namespace RatingsAPI
     public static class BatchDurableFunction
     {
         [FunctionName("BatchDurableFunction")]
-        public static async Task<IActionResult> Run([HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
-            //[EventGridTrigger]EventGridEvent eventGridEvent,
+        public static async Task<IActionResult> Run([EventGridTrigger]EventGridEvent eventGridEvent,
             [DurableClient] IDurableEntityClient client,
             ILogger log)
         {
 
-            string output = "{\"api\": \"PutBlob\",\"clientRequestId\": \"5c76a254 - ed82 - 4b5b - 930b - 80c1355b7098\",\"requestId\": \"1560a72e - 201e-0060 - 2d9a - f29b43000000\",\"eTag\": \"0x8D9C0B1C130CC34\",\"contentType\": \"application / octet - stream\",\"contentLength\": 925,\"blobType\": \"BlockBlob\",\"url\": \"https://ohserverless98765.blob.core.windows.net/batch-files/20211216160800-ProductInformation.csv\",\"sequencer\": \"00000000000000000000000000008B8000000000005fe163\",\"storageDiagnostics\": {\"batchId\": \"2691a457-2006-0006-009a-f22919000000\"}}";
+            string output = eventGridEvent.Data.ToString();
             JObject jsonResult = JObject.Parse(output);
             string fileName = jsonResult.SelectToken("url").ToString();
 
             fileName = fileName.Split('/')[fileName.Split('/').Length - 1];
             fileName = fileName.Split('-')[0];
 
-
-
             //read current state 
-            
             var entityId = new EntityId("Counter", fileName);
             var response = await client.ReadEntityStateAsync<Counter>(entityId);
 
@@ -83,7 +79,7 @@ namespace RatingsAPI
             }
 
             var content = await theResult.Content.ReadAsStringAsync();
-            //store json to document db after
+            //TODO: store json to document db after
 
 
             return theResult;
