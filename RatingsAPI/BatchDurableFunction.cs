@@ -16,6 +16,9 @@ using Newtonsoft.Json.Linq;
 using System.IO;
 using System.Net.Http;
 using System.Text.Encodings;
+using Microsoft.Azure.Documents;
+using Microsoft.Azure.Documents.Client;
+using Microsoft.Azure.Cosmos;
 
 namespace RatingsAPI
 {
@@ -23,7 +26,7 @@ namespace RatingsAPI
     {
         [FunctionName("BatchDurableFunction")]
         public static async Task<IActionResult> Run([EventGridTrigger]EventGridEvent eventGridEvent,
-            [DurableClient] IDurableEntityClient client,
+            [DurableClient] IDurableEntityClient client, 
             ILogger log)
         {
 
@@ -80,12 +83,18 @@ namespace RatingsAPI
 
             var content = await theResult.Content.ReadAsStringAsync();
             //TODO: store json to document db after
-
+            string envkey =Environment.GetEnvironmentVariable("CosmosDBConnection");
+            string [] list = envkey.Split(';');
+            IDocumentClient client = new DocumentClient(new Uri (list[0]),list[1]);
+             Uri collectionUri = UriFactory.CreateDocumentCollectionUri("products", "orders");
+            //Document doc = await client.CreateDocumentAsync("productsd/db_rid/colls/coll_rid/", theResult );
+            Document doc = await client.CreateDocumentAsync(collectionUri, theResult );
 
             return theResult;
         }
 
     }
+
     [JsonObject(MemberSerialization.OptIn)]
     public class Counter
     {
